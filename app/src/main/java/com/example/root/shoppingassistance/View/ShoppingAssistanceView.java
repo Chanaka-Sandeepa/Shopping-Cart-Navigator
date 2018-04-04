@@ -32,7 +32,8 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
     String errorMessage = "Invalid request !";
     private final int REQ_CODE_SPEECH_INPUT = 100;
     ShoppingAssistanceController shoppingAssistanceController = new ShoppingAssistanceController();
-    boolean isStarted = false;
+    static boolean isStarted = false;
+    boolean isNextItem = false;
     int index =1;
     String message;
 
@@ -64,14 +65,18 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
-                speakOut(startText);
+                try {
+                    speakOut(startText);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
 
         });
     }
 
     //method to speak
-    private void speakOut(String text) {
+    private void speakOut(String text) throws InterruptedException {
         txtq.setText(text);
         if (text.length() == 0) {
             txtq.setText(text);
@@ -82,6 +87,7 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
         }
         else {
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
+            Thread.sleep(2000);
             getSpeechInput();
         }
 
@@ -138,19 +144,35 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
             case REQ_CODE_SPEECH_INPUT:
                 if (resultCode == RESULT_OK && data != null) {
                     ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    txta.setText(result.get(0));
-                    Toast.makeText(getApplicationContext(), result.get(0),
+                    String response = shoppingAssistanceController.selectBestResponse(result);
+                    txta.setText(response);
+
+                    Toast.makeText(getApplicationContext(), response,
                             Toast.LENGTH_LONG).show();
 
-                    print(result.get(0));
+                    print(response);
                     try {
-                        if(isStarted) {
-                            continueChat(result.get(0));
+                        if(response.equals("yes")){
+                            isNextItem = true;
+                            isStarted = false;
+                            index =1;
+                            speakOut("What is your next item");
+                        }
+                        else if(response.equals("no")){
+                            print(shoppingAssistanceController.getShoppingCart());
+                            Toast.makeText(getApplicationContext(), shoppingAssistanceController.getShoppingCart(),
+                                    Toast.LENGTH_LONG).show();
+                            speakOut("success");
+                        }
+                        else if(isStarted) {
+                            continueChat(response);
                         }
                         else {
-                            startChat(result.get(0));
+                            startChat(response);
                         }
                     } catch (ParseException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
@@ -158,7 +180,7 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
         }
     }
 
-    public void startChat(String s) throws ParseException {
+    public void startChat(String s) throws ParseException, InterruptedException {
         if(shoppingAssistanceController.getItemsOfCategory(s.toLowerCase()).size()>0){
             isStarted = true;
             print("started");
@@ -175,7 +197,7 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
 
     }
 
-    public void continueChat(String s) throws ParseException {
+    public void continueChat(String s) throws ParseException, InterruptedException {
 
         if(shoppingAssistanceController.nextQuestion(index,s.toLowerCase()).equals("invalid")) {
             Toast.makeText(getApplicationContext(), errorMessage,
@@ -185,8 +207,15 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
 
         }
         else if(shoppingAssistanceController.nextQuestion(index,s.toLowerCase()).equals("success")){
-            print("success");
-            speakOut("success");
+            shoppingAssistanceController.addToCart();
+            print("item added");
+            speakOut("Do you want to add more items ?");
+//            Thread.sleep(8000);
+//            if(isNextItem){
+//                speakOut("What is your next item");
+//            }else {
+//                speakOut("success");
+//            }
         }
         else{
             message = "what is "+shoppingAssistanceController.nextQuestion(index,s.toLowerCase())+" ?";
@@ -200,5 +229,9 @@ public class ShoppingAssistanceView extends AppCompatActivity implements TextToS
 
     private void print(String s){
         Log.e("message",s);
+    }
+
+    public void isNextItem() throws InterruptedException {
+        speakOut("Do you want to add more items ?");
     }
 }

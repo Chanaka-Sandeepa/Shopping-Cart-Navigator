@@ -14,6 +14,8 @@ import java.util.List;
 
 
 public class ShoppingAssistanceController {
+    private String currentItem;
+    private ArrayList<String> shoopingCart = new ArrayList<String>();
 
     List<Item> items = new ArrayList<Item>();
     List<Item> categoryItems = new ArrayList<Item>();
@@ -23,6 +25,8 @@ public class ShoppingAssistanceController {
         getItems();
         categoryItems = new ArrayList<Item>();
     }
+
+
 
     public List<Item> getItems() throws ParseException {
 
@@ -87,8 +91,19 @@ public class ShoppingAssistanceController {
                 categoryItems.add(items.get(i));
             }
         }
-
         return categoryItems;
+    }
+
+    public String selectBestResponse(ArrayList<String> result){
+        for (String r : result){
+            for(Item i : items){
+                if(r.equals(i.getCategory())){
+                    currentItem = r;
+                    return r;
+                }
+            }
+        }
+        return result.get(0);
     }
 
     public String nextQuestion(int index,String lastResponse){
@@ -124,6 +139,18 @@ public class ShoppingAssistanceController {
 
     private void print(String s){
         Log.e("message",s);
+    }
+
+    public void addToCart(){
+        shoopingCart.add(currentItem);
+    }
+
+    public String getShoppingCart(){
+        String shoppingList = "";
+        for(String s :shoopingCart){
+            shoppingList.concat(s);
+        }
+        return shoppingList;
     }
 
 }
